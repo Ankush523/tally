@@ -1,5 +1,9 @@
-import React, {useCallback} from 'react';
+import React, {useCallback, useMemo} from 'react';
 import {StyleSheet, Text, View} from 'react-native';
+import {
+  IconCircleCheckFilled,
+  IconCircleMinus,
+} from '@tabler/icons-react-native';
 import {Gesture, GestureDetector} from 'react-native-gesture-handler';
 import Animated, {
   runOnJS,
@@ -54,35 +58,62 @@ export function HabitRow({
   const {colors} = useTheme();
   const tx = useSharedValue(0);
 
-  const pan = Gesture.Pan()
-    .activeOffsetX([-12, 12])
-    .onUpdate(e => {
-      tx.value = e.translationX;
-    })
-    .onEnd(e => {
-      if (e.translationX > SWIPE) {
-        runOnJS(onComplete)();
-        runOnJS(() => triggerHaptic('success'))();
-        tx.value = withSpring(320, Motion.habitSpring);
-      } else if (e.translationX < -SWIPE) {
-        runOnJS(onSkip)();
-        runOnJS(() => triggerHaptic('light'))();
-        tx.value = withSpring(-40, Motion.habitSpring);
-      } else {
-        tx.value = withSpring(0, Motion.habitSpring);
-      }
-    });
+  /** Never read optional JS callbacks inside gesture worklets — Reanimated 4 can crash; always runOnJS stable fns. */
+  const runSwipeComplete = useCallback(() => {
+    onComplete();
+    triggerHaptic('success');
+  }, [onComplete]);
 
-  const longPress = Gesture.LongPress()
-    .minDuration(380)
-    .onStart(() => {
-      runOnJS(() => triggerHaptic('medium'))();
-      if (onLongPress) {
-        runOnJS(onLongPress)();
-      }
-    });
+  const runSwipeSkip = useCallback(() => {
+    onSkip();
+    triggerHaptic('light');
+  }, [onSkip]);
 
-  const composed = Gesture.Exclusive(longPress, pan);
+  const runLongPressAction = useCallback(() => {
+    if (!onLongPress) {
+      return;
+    }
+    triggerHaptic('medium');
+    setTimeout(onLongPress, 0);
+  }, [onLongPress]);
+
+  const pan = useMemo(
+    () =>
+      Gesture.Pan()
+        .activeOffsetX([-12, 12])
+        /** Let vertical ScrollView win unless movement is clearly horizontal (avoids native gesture fights). */
+        .failOffsetY([-22, 22])
+        .onUpdate(e => {
+          tx.value = e.translationX;
+        })
+        .onEnd(e => {
+          if (e.translationX > SWIPE) {
+            runOnJS(runSwipeComplete)();
+            tx.value = withSpring(320, Motion.habitSpring);
+          } else if (e.translationX < -SWIPE) {
+            runOnJS(runSwipeSkip)();
+            tx.value = withSpring(-40, Motion.habitSpring);
+          } else {
+            tx.value = withSpring(0, Motion.habitSpring);
+          }
+        }),
+    [runSwipeComplete, runSwipeSkip, tx],
+  );
+
+  const longPress = useMemo(
+    () =>
+      Gesture.LongPress()
+        .minDuration(380)
+        .onStart(() => {
+          runOnJS(runLongPressAction)();
+        }),
+    [runLongPressAction],
+  );
+
+  const composed = useMemo(
+    () => Gesture.Exclusive(longPress, pan),
+    [longPress, pan],
+  );
 
   const animStyle = useAnimatedStyle(() => ({
     transform: [{translateX: tx.value}],
@@ -91,10 +122,10 @@ export function HabitRow({
   const bg = (() => {
     switch (state) {
       case 'done':
-        return colors.green50;
+        return colors.habitDoneSurface;
       case 'skipped':
       case 'grace_used':
-        return colors.amber50;
+        return colors.habitSkippedSurface;
       case 'missed':
         return colors.missedTint;
       default:
@@ -129,6 +160,21 @@ export function HabitRow({
 
   const elevated = state === 'pending';
 
+  const statusGlyph = (() => {
+    const sz = 22;
+    if (state === 'done') {
+      return (
+        <IconCircleCheckFilled color={colors.groveGreen} size={sz} />
+      );
+    }
+    if (state === 'skipped' || state === 'grace_used') {
+      return (
+        <IconCircleMinus color={colors.heat3} size={sz} strokeWidth={2} />
+      );
+    }
+    return <View style={[styles.glyphPlaceholder, {borderColor: colors.border}]} />;
+  })();
+
   return (
     <GestureDetector gesture={composed}>
       <Animated.View
@@ -140,6 +186,7 @@ export function HabitRow({
         ]}
         accessibilityLabel={`Habit ${habit.name}`}>
         <View style={[styles.accentRail, {backgroundColor: accentRailColor}]} />
+        <View style={styles.glyphCol}>{statusGlyph}</View>
         <View style={styles.inner}>
           <Text style={[Typography.labelCaps, {color: colors.textMuted}]}>
             {slotLabel}
@@ -184,16 +231,18 @@ export function HabitRow({
               </View>
             </View>
           ) : null}
-          <Text style={[Typography.metadata, {color: colors.textMuted}]}>
-            Swipe right · done · left · skip
-          </Text>
+          {state === 'pending' ? (
+            <Text style={[Typography.metadata, {color: colors.textMuted}]}>
+              Swipe → done · ← skip · hold to edit
+            </Text>
+          ) : null}
         </View>
       </Animated.View>
     </GestureDetector>
   );
 }
 
-const ACCENT_RAIL_W = 8;
+const ACCENT_RAIL_W = 4;
 
 const styles = StyleSheet.create({
   rowShell: {
@@ -206,11 +255,24 @@ const styles = StyleSheet.create({
     width: ACCENT_RAIL_W,
     alignSelf: 'stretch',
   },
+  glyphCol: {
+    width: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'stretch',
+    paddingLeft: Spacing.xs,
+  },
+  glyphPlaceholder: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+  },
   inner: {
     flex: 1,
     paddingVertical: Spacing.md,
     paddingRight: Spacing.md,
-    paddingLeft: Spacing.sm + 2,
+    paddingLeft: Spacing.sm,
     gap: Spacing.xs,
   },
   graceRow: {

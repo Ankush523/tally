@@ -31,9 +31,9 @@ export const Typography = {
   },
   heroNumber: {
     fontFamily: FontFamily.monoMedium,
-    fontSize: 52,
+    fontSize: 58,
     fontWeight: '500' as TextStyle['fontWeight'],
-    letterSpacing: -2,
+    letterSpacing: -2.4,
   },
   sectionHeader: {
     fontFamily: FontFamily.monoMedium,
@@ -48,6 +48,14 @@ export const Typography = {
     fontWeight: '500' as TextStyle['fontWeight'],
     lineHeight: 20,
     letterSpacing: 0,
+  },
+  /** Task titles — slightly larger than body */
+  taskTitle: {
+    fontFamily: FontFamily.monoMedium,
+    fontSize: 15,
+    fontWeight: '500' as TextStyle['fontWeight'],
+    lineHeight: 22,
+    letterSpacing: -0.2,
   },
   labelCaps: {
     fontFamily: FontFamily.monoMedium,

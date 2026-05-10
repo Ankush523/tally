@@ -5,8 +5,11 @@ import React, {useEffect, useState} from 'react';
 import {ScrollView, StyleSheet, Text, TextInput, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import Habit from '../db/models/Habit';
+import {IconPlus} from '@tabler/icons-react-native';
 import {AppBottomSheetModal} from '../components/AppBottomSheetModal';
+import {EmptyState} from '../components/EmptyState';
 import {FabButton} from '../components/FabButton';
+import {GraceTokenDots} from '../components/GraceTokenDots';
 import {HapticPressable} from '../components/HapticPressable';
 import {PrimaryButton} from '../components/PrimaryButton';
 import {useTheme} from '../hooks/useTheme';
@@ -47,9 +50,20 @@ export function HabitsScreen() {
         <FabButton
           onPress={() => setOpen(true)}
           accessibilityLabel="Add new habit"
+          attention={grouped.length === 0}
         />
       </View>
-      <ScrollView style={{flex: 1}} contentContainerStyle={{paddingBottom: Spacing.xxxl}}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        style={{flex: 1}}
+        contentContainerStyle={{paddingBottom: Spacing.xxxl}}>
+        {grouped.length === 0 ? (
+          <EmptyState
+            icon={<IconPlus color={colors.inkViolet} size={28} strokeWidth={2.25} />}
+            title="No habits yet"
+            hint="Tap + to add your first habit — name it and keep going."
+          />
+        ) : null}
         {grouped.map(item => {
           const sch = parseSchedule(item.scheduleJson);
           return (
@@ -75,9 +89,12 @@ export function HabitsScreen() {
               <Text style={[Typography.body, styles.rowTitle, {color: colors.textPrimary}]}>
                 {item.name}
               </Text>
-              <Text style={[Typography.metadata, styles.rowMeta, {color: colors.textMuted}]}>
-                {item.checkMode} · {item.graceTokens} grace tokens
-              </Text>
+              <View style={styles.rowMeta}>
+                <Text style={[Typography.metadata, {color: colors.textMuted}]}>
+                  {item.checkMode}
+                </Text>
+                <GraceTokenDots available={item.graceTokens} />
+              </View>
             </HapticPressable>
           );
         })}
@@ -145,6 +162,7 @@ const styles = StyleSheet.create({
   },
   rowMeta: {
     marginTop: 4,
+    gap: Spacing.sm,
   },
   input: {
     borderWidth: 2,

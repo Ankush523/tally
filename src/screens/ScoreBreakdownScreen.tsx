@@ -33,7 +33,9 @@ export function ScoreBreakdownScreen({route}: Props) {
   const pct = (n: number) => `${Math.round(n * 100)}%`;
 
   return (
-    <ScrollView style={[styles.wrap, {backgroundColor: canvas}]}>
+    <ScrollView
+      showsVerticalScrollIndicator={false}
+      style={[styles.wrap, {backgroundColor: canvas}]}>
       <Text style={[Typography.screenTitle, {color: colors.textPrimary}]}>
         {dateKey}
       </Text>

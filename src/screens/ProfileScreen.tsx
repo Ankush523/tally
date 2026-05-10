@@ -59,6 +59,7 @@ export function ProfileScreen(_props: Props) {
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
+          showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled">
           <Text style={[Typography.screenTitle, {color: colors.textPrimary}]}>

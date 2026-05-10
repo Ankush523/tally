@@ -3,6 +3,11 @@
  *
  * Dark brutal accents mirror light (ink borders + black shadow slab) with **moon frost**:
  * soft blue-whites — visible on the canvas, never paper-white glare.
+ *
+ * **Dark accent lane (red / coral)** — Light keeps brick + paper contrast (`ember` vs parchment).
+ * On vault-black sheets, pastel coral sinks into moon-frost neutrals, so dark mode uses a
+ * **molten flare** palette: higher chroma, higher luminance corals and a rose-ink wash for
+ * missed rows — one disciplined hue family, utility-first, readable on `#000` / `#070910`.
  */
 
 export const Colors = {
@@ -40,12 +45,20 @@ export const Colors = {
     shadowAccent: '#000000',
     brutalShadow: '#000000',
     cardRim: '#000000',
+    /** Day score card lift — warm paper */
+    scoreCardTint: '#FBF9F4',
+    habitDoneSurface: '#E1F5EE',
+    habitSkippedSurface: '#FAEEDA',
+    /** Greeting line — higher contrast than metadata gray */
+    greetingStrong: '#1C1B1F',
   },
   dark: {
     scheme: 'dark' as const,
-    inkViolet: '#FF9497',
+    /** Brand / primary actions — hot coral, not dusty pink; pops on vault black */
+    inkViolet: '#FF4F55',
     groveGreen: '#72F0B4',
-    ember: '#FFB89A',
+    /** Alerts, missed streaks, errors — scarlet-coral, clearly louder than muted text */
+    ember: '#FF6B66',
     /** Canvas — blue-black, not flat neutral gray */
     graphite: '#070910',
     parchment: '#F2F2F2',
@@ -66,16 +79,17 @@ export const Colors = {
     border: '#F6F7FB',
     tabInactive: '#949BB3',
     energyDeep: '#E8ECF6',
-    energyQuick: '#FF9497',
+    energyQuick: '#FF4F55',
     energyLow: '#AEB6CC',
-    missedTint: '#422C32',
+    /** Missed row wash — deep rose ink (chromatic, not brown-gray) */
+    missedTint: '#301018',
     /** Sheets / chrome — black panel fill */
     sheetSurface: '#000000',
     /** Cards / boxed panels — black interior */
     surfaceRaised: '#000000',
     overlayScrim: 'rgba(2, 4, 12, 0.88)',
     onPrimary: '#070910',
-    primaryMuted: 'rgba(255, 148, 151, 0.28)',
+    primaryMuted: 'rgba(255, 79, 85, 0.38)',
     shadowAccent: '#848BA3',
     /**
      * Offset slab — desaturated moon white (lighter than canvas & card), inverse of light `#000`.
@@ -83,6 +97,10 @@ export const Colors = {
     brutalShadow: 'rgba(255, 255, 255, 0.82)',
     /** Slightly brighter rim than `border` for nested / subtle frames */
     cardRim: '#F6F7FB',
+    scoreCardTint: '#141920',
+    habitDoneSurface: '#152820',
+    habitSkippedSurface: '#2A2218',
+    greetingStrong: '#E8ECF6',
   },
 } as const;
 

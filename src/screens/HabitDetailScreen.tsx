@@ -66,7 +66,9 @@ export function HabitDetailScreen({route}: Props) {
 
   return (
     <SafeAreaView style={{flex: 1, backgroundColor: canvas}} edges={['bottom']}>
-    <ScrollView style={[styles.wrap, {backgroundColor: canvas}]}>
+    <ScrollView
+      showsVerticalScrollIndicator={false}
+      style={[styles.wrap, {backgroundColor: canvas}]}>
       <Text style={[Typography.screenTitle, {color: colors.textPrimary}]}>
         {habit.name}
       </Text>

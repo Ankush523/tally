@@ -160,7 +160,9 @@ export function FocusScreen() {
   if (phase === 'idle') {
     return (
       <SafeAreaView style={[styles.safe, {backgroundColor: canvas}]} edges={['top']}>
-        <ScrollView contentContainerStyle={styles.idle}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.idle}>
           <Text style={[Typography.screenTitle, {color: colors.textPrimary}]}>
             Focus
           </Text>

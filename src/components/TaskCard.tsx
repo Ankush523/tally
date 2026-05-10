@@ -1,10 +1,12 @@
 import React from 'react';
 import {StyleSheet, Text, View} from 'react-native';
+import {IconCheck} from '@tabler/icons-react-native';
 import {Gesture, GestureDetector} from 'react-native-gesture-handler';
 import Animated, {
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
+  withSequence,
   withSpring,
 } from 'react-native-reanimated';
 import Task from '../db/models/Task';
@@ -56,6 +58,7 @@ function energyLabelColor(
 export function TaskCard({task, onComplete, onDefer, onOpen}: Props) {
   const {colors, isDark} = useTheme();
   const tx = useSharedValue(0);
+  const checkScale = useSharedValue(1);
 
   const pan = Gesture.Pan()
     .activeOffsetX([-12, 12])
@@ -76,58 +79,91 @@ export function TaskCard({task, onComplete, onDefer, onOpen}: Props) {
       }
     });
 
-  const style = useAnimatedStyle(() => ({
+  const rowStyle = useAnimatedStyle(() => ({
     transform: [{translateX: tx.value}],
   }));
 
+  const checkStyle = useAnimatedStyle(() => ({
+    transform: [{scale: checkScale.value}],
+  }));
+
+  const fireComplete = () => {
+    triggerHaptic('success');
+    checkScale.value = withSequence(
+      withSpring(0.12, Motion.pressSpring),
+      withSpring(1, Motion.milestoneSpring),
+    );
+    setTimeout(() => onComplete(), 280);
+  };
+
   return (
-    <GestureDetector gesture={pan}>
-      <Animated.View
-        style={[
-          styles.card,
-          cardShadow(colors),
-          style,
-          {
-            backgroundColor: colors.surfaceRaised,
-            borderColor: colors.border,
-          },
-        ]}>
-        <HapticPressable
-          haptic="light"
-          onPress={onOpen}
-          style={({pressed}) => [styles.inner, pressed ? {opacity: 0.92} : null]}
-          accessibilityRole="button"
-          accessibilityLabel={`Task ${task.title}`}>
-          <View style={styles.top}>
-            <Text style={[Typography.body, {color: colors.textPrimary, flex: 1}]}>
-              {task.title}
-            </Text>
-            <View
+    <View
+      style={[
+        styles.card,
+        cardShadow(colors),
+        {
+          backgroundColor: colors.surfaceRaised,
+          borderColor: colors.border,
+        },
+      ]}>
+      <GestureDetector gesture={pan}>
+        <Animated.View style={[styles.row, rowStyle]}>
+          <HapticPressable
+            haptic="medium"
+            onPress={fireComplete}
+            accessibilityRole="button"
+            accessibilityLabel={`Mark complete: ${task.title}`}
+            hitSlop={{top: 8, bottom: 8, left: 10, right: 6}}
+            style={styles.checkHit}>
+            <Animated.View
               style={[
-                styles.badge,
-                {
-                  backgroundColor: energyColor(task.energyTag, colors),
-                  borderColor: colors.border,
-                },
+                styles.checkRing,
+                {borderColor: colors.border, backgroundColor: colors.sheetSurface},
+                checkStyle,
               ]}>
-              <Text
+              <IconCheck color={colors.groveGreen} size={16} strokeWidth={2.5} />
+            </Animated.View>
+          </HapticPressable>
+          <HapticPressable
+            haptic="light"
+            onPress={onOpen}
+            style={({pressed}) => [
+              styles.inner,
+              pressed ? {opacity: 0.92} : null,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={`Task ${task.title}`}>
+            <View style={styles.top}>
+              <Text style={[Typography.taskTitle, styles.titleFlex, {color: colors.textPrimary}]}>
+                {task.title}
+              </Text>
+              <View
                 style={[
-                  Typography.labelCaps,
+                  styles.badge,
                   {
-                    color: energyLabelColor(task.energyTag, colors, isDark),
-                    fontSize: 9,
+                    backgroundColor: energyColor(task.energyTag, colors),
+                    borderColor: colors.border,
                   },
                 ]}>
-                {task.energyTag}
-              </Text>
+                <Text
+                  style={[
+                    Typography.labelCaps,
+                    {
+                      color: energyLabelColor(task.energyTag, colors, isDark),
+                      fontSize: 9,
+                    },
+                  ]}>
+                  {task.energyTag}
+                </Text>
+              </View>
             </View>
-          </View>
-          <Text style={[Typography.metadata, {color: colors.textMuted}]}>
-            est. {task.estimatedMin} min · {task.slot}
-          </Text>
-        </HapticPressable>
-      </Animated.View>
-    </GestureDetector>
+            <Text style={[Typography.metadata, {color: colors.textMuted}]}>
+              est. {task.estimatedMin} min · {task.slot}
+            </Text>
+          </HapticPressable>
+        </Animated.View>
+      </GestureDetector>
+    </View>
   );
 }
 
@@ -138,8 +174,34 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
     overflow: 'hidden',
   },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+  },
+  checkHit: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    minWidth: 48,
+    minHeight: 48,
+    paddingLeft: Spacing.sm,
+    paddingRight: Spacing.xs,
+  },
+  titleFlex: {
+    flex: 1,
+    minWidth: 0,
+  },
+  checkRing: {
+    width: 36,
+    height: 36,
+    borderRadius: Radius.sm,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   inner: {
+    flex: 1,
     padding: Spacing.md,
+    paddingLeft: Spacing.sm,
     gap: Spacing.xs,
   },
   top: {

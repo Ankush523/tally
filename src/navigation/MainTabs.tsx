@@ -3,13 +3,17 @@ import {
   BottomTabBarButtonProps,
   createBottomTabNavigator,
 } from '@react-navigation/bottom-tabs';
-import {Platform} from 'react-native';
+import {Platform, StyleSheet, Text, View} from 'react-native';
 import {
   IconCalendar,
+  IconCalendarFilled,
   IconChartBar,
   IconClock,
+  IconClockFilled,
   IconHeadphones,
+  IconHeadphonesFilled,
   IconLayoutGrid,
+  IconLayoutGridFilled,
 } from '@tabler/icons-react-native';
 import {FocusScreen} from '../screens/FocusScreen';
 import {HabitsScreen} from '../screens/HabitsScreen';
@@ -17,8 +21,7 @@ import {HomeScreen} from '../screens/HomeScreen';
 import {InsightsScreen} from '../screens/InsightsScreen';
 import {TasksScreen} from '../screens/TasksScreen';
 import {useTheme} from '../hooks/useTheme';
-import {Radius} from '../theme/radius';
-import {brutalBorderWidth, tabBarShadow} from '../theme/shadows';
+import {rimThinWidth} from '../theme/shadows';
 import {Typography} from '../theme/typography';
 import {AnimatedTabBarButton} from './AnimatedTabBarButton';
 import type {MainTabParamList} from './types';
@@ -35,30 +38,54 @@ const headerMono = Platform.select({
   ios: 'JetBrainsMono-Medium',
   android: 'JetBrainsMono_500Medium',
   default: 'JetBrainsMono-Medium',
-});
+}) as string;
 
-function HomeTabIcon({color, size}: {color: string; size?: number}) {
-  return <IconLayoutGrid color={color} size={size ?? TAB_ICON_SIZE} strokeWidth={2.5} />;
+type OutlineIcon = React.ComponentType<{
+  color: string;
+  size?: number;
+  strokeWidth?: number;
+}>;
+type FilledIcon = React.ComponentType<{color: string; size?: number}>;
+
+function TabPairGlyph({
+  focused,
+  color,
+  Outline,
+  Filled,
+}: {
+  focused: boolean;
+  color: string;
+  Outline: OutlineIcon;
+  Filled: FilledIcon;
+}) {
+  return (
+    <View style={tabGlyphStyles.glyphWrap}>
+      {focused ? (
+        <Filled color={color} size={TAB_ICON_SIZE} />
+      ) : (
+        <Outline color={color} size={TAB_ICON_SIZE} strokeWidth={2} />
+      )}
+    </View>
+  );
 }
 
-function HabitsTabIcon({color, size}: {color: string; size?: number}) {
-  return <IconClock color={color} size={size ?? TAB_ICON_SIZE} strokeWidth={2.5} />;
-}
-
-function TasksTabIcon({color, size}: {color: string; size?: number}) {
-  return <IconCalendar color={color} size={size ?? TAB_ICON_SIZE} strokeWidth={2.5} />;
-}
-
-function FocusTabIcon({color, size}: {color: string; size?: number}) {
-  return <IconHeadphones color={color} size={size ?? TAB_ICON_SIZE} strokeWidth={2.5} />;
-}
-
-function InsightsTabIcon({color, size}: {color: string; size?: number}) {
-  return <IconChartBar color={color} size={size ?? TAB_ICON_SIZE} strokeWidth={2.5} />;
+function InsightsGlyph({focused, color}: {focused: boolean; color: string}) {
+  return (
+    <View style={tabGlyphStyles.glyphWrap}>
+      <IconChartBar
+        color={color}
+        size={TAB_ICON_SIZE}
+        strokeWidth={focused ? 2.85 : 2}
+      />
+    </View>
+  );
 }
 
 export function MainTabs() {
   const {colors, isDark} = useTheme();
+
+  /** Light: parchment rail + one ink hairline (no upward shadow — avoids white seam + double rim). */
+  const tabBarSurface = isDark ? colors.sheetSurface : colors.parchment;
 
   return (
     <Tab.Navigator
@@ -66,32 +93,60 @@ export function MainTabs() {
         headerShown: false,
         tabBarActiveTintColor: colors.inkViolet,
         tabBarInactiveTintColor: colors.tabInactive,
-        tabBarLabelStyle: [Typography.tabLabel, {fontFamily: headerMono}],
         tabBarHideOnKeyboard: true,
         tabBarButton: TabBarButton,
         tabBarActiveBackgroundColor: colors.violet50,
+        /**
+         * Padding must stay 0: RN applies tabBarItemStyle to the OUTER wrapper; any
+         * padding here sits outside the Pressable, so active gray cannot paint it (white/parchment gaps).
+         */
         tabBarItemStyle: {
-          borderRadius: Radius.sm,
-          marginHorizontal: 2,
+          borderRadius: 0,
+          marginHorizontal: 0,
+          marginVertical: 0,
+          padding: 0,
+          paddingVertical: 0,
+          paddingHorizontal: 0,
         },
-        tabBarStyle: [
-          {
-            backgroundColor: colors.sheetSurface,
-            borderTopColor: isDark ? 'transparent' : colors.border,
-            borderTopWidth: isDark ? 0 : brutalBorderWidth,
-            paddingTop: 0,
-            paddingBottom: 0,
-          },
-          /* Light: upward brutal shadow separates bar from content; dark skips border + shadow (no white strip). */
-          !isDark && tabBarShadow(colors),
-        ],
+        tabBarLabel: ({focused, color, children}) => (
+          <Text
+            style={[
+              Typography.tabLabel,
+              {
+                color,
+                fontFamily: headerMono,
+                fontWeight: focused ? '700' : '500',
+              },
+            ]}>
+            {children}
+          </Text>
+        ),
+        tabBarStyle: {
+          backgroundColor: tabBarSurface,
+          borderTopColor: isDark ? 'transparent' : colors.border,
+          borderTopWidth: isDark ? 0 : rimThinWidth,
+          paddingTop: 0,
+          /** 0 so tab row + Pressable fill full bar height; bottom inset is applied inside AnimatedTabBarButton. */
+          paddingBottom: 0,
+          elevation: 0,
+          shadowOpacity: 0,
+          shadowOffset: {width: 0, height: 0},
+          shadowRadius: 0,
+        },
       }}>
       <Tab.Screen
         name="Home"
         component={HomeScreen}
         options={{
           tabBarLabel: 'HOME',
-          tabBarIcon: HomeTabIcon,
+          tabBarIcon: ({focused, color}) => (
+            <TabPairGlyph
+              focused={focused}
+              color={color}
+              Outline={IconLayoutGrid}
+              Filled={IconLayoutGridFilled}
+            />
+          ),
         }}
       />
       <Tab.Screen
@@ -99,7 +154,14 @@ export function MainTabs() {
         component={HabitsScreen}
         options={{
           tabBarLabel: 'HABITS',
-          tabBarIcon: HabitsTabIcon,
+          tabBarIcon: ({focused, color}) => (
+            <TabPairGlyph
+              focused={focused}
+              color={color}
+              Outline={IconClock}
+              Filled={IconClockFilled}
+            />
+          ),
         }}
       />
       <Tab.Screen
@@ -107,7 +169,14 @@ export function MainTabs() {
         component={TasksScreen}
         options={{
           tabBarLabel: 'TASKS',
-          tabBarIcon: TasksTabIcon,
+          tabBarIcon: ({focused, color}) => (
+            <TabPairGlyph
+              focused={focused}
+              color={color}
+              Outline={IconCalendar}
+              Filled={IconCalendarFilled}
+            />
+          ),
         }}
       />
       <Tab.Screen
@@ -115,7 +184,14 @@ export function MainTabs() {
         component={FocusScreen}
         options={{
           tabBarLabel: 'FOCUS',
-          tabBarIcon: FocusTabIcon,
+          tabBarIcon: ({focused, color}) => (
+            <TabPairGlyph
+              focused={focused}
+              color={color}
+              Outline={IconHeadphones}
+              Filled={IconHeadphonesFilled}
+            />
+          ),
         }}
       />
       <Tab.Screen
@@ -123,9 +199,19 @@ export function MainTabs() {
         component={InsightsScreen}
         options={{
           tabBarLabel: 'INSIGHTS',
-          tabBarIcon: InsightsTabIcon,
+          tabBarIcon: ({focused, color}) => (
+            <InsightsGlyph focused={focused} color={color} />
+          ),
         }}
       />
     </Tab.Navigator>
   );
 }
+
+const tabGlyphStyles = StyleSheet.create({
+  glyphWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 28,
+  },
+});

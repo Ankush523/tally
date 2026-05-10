@@ -1,13 +1,16 @@
 import React, {useEffect} from 'react';
 import {StyleSheet, Text, View} from 'react-native';
 import Animated, {
+  interpolateColor,
   runOnJS,
   useAnimatedReaction,
   useAnimatedStyle,
   useSharedValue,
+  withSequence,
   withTiming,
 } from 'react-native-reanimated';
 import {HapticPressable} from './HapticPressable';
+import {useReducedMotionPreference} from '../hooks/useReducedMotionPreference';
 import {useTheme} from '../hooks/useTheme';
 import {Motion} from '../theme/motion';
 import {Radius} from '../theme/radius';
@@ -29,9 +32,14 @@ export function DayScoreCard({
   onPressBreakdown,
 }: Props) {
   const {colors} = useTheme();
+  const reduceMotion = useReducedMotionPreference();
   const animated = useSharedValue(score);
   const [display, setDisplay] = React.useState(String(score));
   const barWidth = useSharedValue(score / 100);
+  const borderPulse = useSharedValue(0);
+
+  const borderLo = colors.border;
+  const borderHi = colors.inkViolet;
 
   useEffect(() => {
     animated.value = withTiming(score, {
@@ -42,7 +50,20 @@ export function DayScoreCard({
       duration: Motion.scoreTickMs,
       easing: Motion.scoreEaseOut,
     });
-  }, [animated, barWidth, score]);
+    borderPulse.value = 0;
+    if (!reduceMotion) {
+      borderPulse.value = withSequence(
+        withTiming(1, {duration: Motion.scorePulseInMs}),
+        withTiming(0, {duration: Motion.scorePulseOutMs}),
+      );
+    }
+  }, [
+    animated,
+    barWidth,
+    borderPulse,
+    score,
+    reduceMotion,
+  ]);
 
   useAnimatedReaction(
     () => Math.round(animated.value),
@@ -56,6 +77,10 @@ export function DayScoreCard({
     width: `${barWidth.value * 100}%`,
   }));
 
+  const cardPulseStyle = useAnimatedStyle(() => ({
+    borderColor: interpolateColor(borderPulse.value, [0, 1], [borderLo, borderHi]),
+  }));
+
   const deltaLabel =
     deltaVsYesterday === 0
       ? 'same as yesterday'
@@ -63,52 +88,52 @@ export function DayScoreCard({
         ? `↑${deltaVsYesterday} from yesterday`
         : `↓${Math.abs(deltaVsYesterday)} from yesterday`;
 
+  const a11yLabel = `Today score ${display} out of 100. ${deltaLabel}. ${tag}. Opens breakdown.`;
+
   return (
     <HapticPressable
       haptic="medium"
       onPress={onPressBreakdown}
       accessibilityRole="button"
-      accessibilityLabel="Day score, tap for breakdown"
+      accessibilityLabel={a11yLabel}
       android_ripple={{color: colors.primaryMuted}}
       style={({pressed}) => (pressed ? {opacity: 0.96} : null)}>
-      <View
+      <Animated.View
         style={[
           styles.card,
           cardShadow(colors),
+          cardPulseStyle,
           {
-            backgroundColor: colors.surfaceRaised,
-            borderColor: colors.border,
+            backgroundColor: colors.scoreCardTint,
+            borderWidth: brutalBorderWidth,
           },
         ]}>
         <View style={styles.rowTop}>
           <Text style={[Typography.labelCaps, {color: colors.inkViolet}]}>
             TODAY
           </Text>
-          <Text style={[Typography.metadata, {color: colors.textMuted}]}>
-            {tag}
-          </Text>
         </View>
         <Animated.Text
           style={[
             Typography.heroNumber,
-            styles.hero,
+            styles.heroSize,
             {color: colors.textPrimary},
-          ]}>
+          ]}
+          accessibilityElementsHidden
+          importantForAccessibility="no">
           {display}
         </Animated.Text>
-        <View style={[styles.track, {backgroundColor: colors.gray100, borderColor: colors.border}]}>
+        <View
+          style={[styles.track, {backgroundColor: colors.gray100, borderColor: colors.border}]}
+          importantForAccessibility="no">
           <Animated.View
-            style={[
-              styles.bar,
-              {backgroundColor: colors.inkViolet},
-              barStyle,
-            ]}
+            style={[styles.bar, {backgroundColor: colors.inkViolet}, barStyle]}
           />
         </View>
         <Text style={[Typography.metadata, {color: colors.textSecondary}]}>
-          {deltaLabel} · on track
+          {deltaLabel} · {tag}
         </Text>
-      </View>
+      </Animated.View>
     </HapticPressable>
   );
 }
@@ -116,7 +141,6 @@ export function DayScoreCard({
 const styles = StyleSheet.create({
   card: {
     borderRadius: Radius.lg,
-    borderWidth: brutalBorderWidth,
     padding: Spacing.lg,
     gap: Spacing.sm,
   },
@@ -125,14 +149,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  hero: {
+  heroSize: {
+    fontSize: 60,
+    lineHeight: 66,
     marginVertical: Spacing.xs,
   },
   track: {
-    height: 10,
+    height: 6,
     borderRadius: Radius.xs,
     overflow: 'hidden',
-    borderWidth: 2,
+    borderWidth: 1,
   },
   bar: {
     height: '100%',

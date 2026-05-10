@@ -3,8 +3,10 @@ import {useDatabase} from '@nozbe/watermelondb/react';
 import React, {useEffect, useMemo, useState} from 'react';
 import {ScrollView, StyleSheet, Text, TextInput, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
+import {IconSquareRoundedPlus} from '@tabler/icons-react-native';
 import Task from '../db/models/Task';
 import {AppBottomSheetModal} from '../components/AppBottomSheetModal';
+import {EmptyState} from '../components/EmptyState';
 import {FabButton} from '../components/FabButton';
 import {PrimaryButton} from '../components/PrimaryButton';
 import {TaskCard} from '../components/TaskCard';
@@ -71,10 +73,22 @@ export function TasksScreen() {
         <FabButton
           onPress={() => setOpen(true)}
           accessibilityLabel="Add task with natural language"
+          attention={openTasks.length === 0}
         />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollSections}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollSections}>
+      {openTasks.length === 0 ? (
+        <EmptyState
+          icon={
+            <IconSquareRoundedPlus color={colors.inkViolet} size={28} strokeWidth={2} />
+          }
+          title="No tasks yet"
+          hint="Tap + — one line is enough; we infer energy and due time."
+        />
+      ) : null}
       <Section title="NOW" colors={colors}>
         {now.map(t => (
           <TaskCard

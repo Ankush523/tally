@@ -12,6 +12,9 @@ export const Motion = {
   taskStrikethroughDurationMs: 380,
   screenTransitionMs: 280,
   scoreTickMs: 640,
+  /** Day score card border pulse — in/out (keep ≤ ~400ms total feel) */
+  scorePulseInMs: 160,
+  scorePulseOutMs: 320,
   milestoneMs: 760,
   habitSwipeMs: 280,
   pressInMs: 70,

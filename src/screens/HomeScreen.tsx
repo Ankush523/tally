@@ -4,20 +4,18 @@ import type {BottomTabNavigationProp} from '@react-navigation/bottom-tabs';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
-import {
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import {RefreshControl, StyleSheet, Text, View} from 'react-native';
+import {ScrollView} from 'react-native-gesture-handler';
 import {SafeAreaView} from 'react-native-safe-area-context';
+import {IconCalendarPlus, IconClipboardList} from '@tabler/icons-react-native';
 import {DayScoreCard} from '../components/DayScoreCard';
+import {EmptyState} from '../components/EmptyState';
 import {HapticPressable} from '../components/HapticPressable';
 import {FadeIn} from '../components/FadeIn';
 import {HeatmapStrip} from '../components/HeatmapStrip';
 import {HabitRow, RowVisualState} from '../components/HabitRow';
 import {TaskCard} from '../components/TaskCard';
+import {WeekScoreDots} from '../components/WeekScoreDots';
 import Habit from '../db/models/Habit';
 import HabitLog from '../db/models/HabitLog';
 import Task from '../db/models/Task';
@@ -42,6 +40,7 @@ import {brutalBorderWidth, cardShadow} from '../theme/shadows';
 import {Spacing} from '../theme/spacing';
 import {Typography} from '../theme/typography';
 import {parseSchedule, slotLabel} from '../utils/habitSchedule';
+import {formatScoreInsight} from '../utils/scoreInsight';
 import {toDateKey} from '../utils/dateKey';
 import {subDays} from 'date-fns';
 
@@ -49,9 +48,10 @@ function deriveState(
   logToday: HabitLog | undefined,
   logYesterday: HabitLog | undefined,
 ): {state: RowVisualState; missedYesterday: boolean} {
+  /** Yesterday “resolved”: logged outcome or explicit forfeit (`missed` = declined grace). */
   const missedYesterday =
     !logYesterday ||
-    !['done', 'skipped', 'grace_used'].includes(logYesterday.status);
+    !['done', 'skipped', 'grace_used', 'missed'].includes(logYesterday.status);
 
   if (logToday?.status === 'done') {
     return {state: 'done', missedYesterday};
@@ -177,6 +177,22 @@ export function HomeScreen() {
 
   const doneCount = habits.filter(h => logTodayByHabit.get(h.id)?.status === 'done').length;
 
+  const habitsLeftToday = habits.filter(h => {
+    const s = logTodayByHabit.get(h.id)?.status;
+    return s !== 'done' && s !== 'skipped' && s !== 'grace_used';
+  }).length;
+
+  const weekBestScore =
+    heatmapDays.length > 0
+      ? Math.max(...heatmapDays.slice(-7).map(d => d.score), 0)
+      : 0;
+
+  const insightLine = formatScoreInsight(
+    scoreVal,
+    weekBestScore,
+    habitsLeftToday,
+  );
+
   const openTasks = tasks.filter(t => !t.completedAt).slice(0, 3);
 
   const greeting =
@@ -216,6 +232,7 @@ export function HomeScreen() {
   return (
     <SafeAreaView style={[styles.safe, {backgroundColor: canvas}]} edges={['top']}>
       <ScrollView
+        showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
         refreshControl={
           <RefreshControl
@@ -232,7 +249,7 @@ export function HomeScreen() {
                 {greeting},{'\n'}
                 {displayFirstName}
               </Text>
-              <Text style={[Typography.metadata, {color: colors.textMuted}]}>
+              <Text style={[Typography.metadata, {color: colors.greetingStrong}]}>
                 Day score updates as you go — calm pace.
               </Text>
             </View>
@@ -257,14 +274,22 @@ export function HomeScreen() {
         </FadeIn>
 
         <FadeIn delay={Motion.staggerMs}>
-          <DayScoreCard
-            score={scoreVal}
-            deltaVsYesterday={delta}
-            tag={tag}
-            onPressBreakdown={() =>
-              rootNavigation.navigate('ScoreBreakdown', {dateKey: todayKey})
-            }
-          />
+          <View style={styles.scoreBlock}>
+            <DayScoreCard
+              score={scoreVal}
+              deltaVsYesterday={delta}
+              tag={tag}
+              onPressBreakdown={() =>
+                rootNavigation.navigate('ScoreBreakdown', {dateKey: todayKey})
+              }
+            />
+            <View style={styles.scoreMeta}>
+              <Text style={[Typography.metadata, {color: colors.textSecondary}]}>
+                {insightLine}
+              </Text>
+              <WeekScoreDots days={heatmapDays} />
+            </View>
+          </View>
         </FadeIn>
 
         <Text
@@ -274,6 +299,15 @@ export function HomeScreen() {
           ]}>
           HABITS — {doneCount}/{habits.length || 0} DONE
         </Text>
+        {habits.length === 0 ? (
+          <EmptyState
+            icon={
+              <IconClipboardList color={colors.inkViolet} size={26} strokeWidth={2} />
+            }
+            title="No habits yet"
+            hint="Open the Habits tab — tap + to add your first one."
+          />
+        ) : null}
         {habits.map((h, index) => {
           const lt = logTodayByHabit.get(h.id);
           const ly = logYesterdayByHabit.get(h.id);
@@ -326,9 +360,13 @@ export function HomeScreen() {
           />
         ))}
         {openTasks.length === 0 ? (
-          <Text style={[Typography.body, {color: colors.textMuted}]}>
-            No open tasks — add one from the Tasks tab.
-          </Text>
+          <EmptyState
+            icon={
+              <IconCalendarPlus color={colors.inkViolet} size={26} strokeWidth={2} />
+            }
+            title="No open tasks"
+            hint="Pull up the Tasks tab — tap + and describe what you need in one line."
+          />
         ) : null}
 
         <View style={styles.miniRow}>
@@ -387,7 +425,7 @@ export function HomeScreen() {
           hitSlop={12}
           style={({pressed}) => (pressed ? {opacity: 0.85} : null)}>
           <Text style={[Typography.metadata, {color: colors.inkViolet}]}>
-            Swipe insights · weekly correlations live in the Insights tab
+            Weekly correlations · Insights tab
           </Text>
         </HapticPressable>
       </ScrollView>
@@ -397,6 +435,13 @@ export function HomeScreen() {
 
 const styles = StyleSheet.create({
   safe: {flex: 1},
+  scoreBlock: {
+    gap: Spacing.md,
+  },
+  scoreMeta: {
+    gap: Spacing.sm,
+    paddingLeft: 2,
+  },
   scroll: {
     padding: Spacing.lg,
     paddingBottom: Spacing.xxxl,
