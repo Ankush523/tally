@@ -1,8 +1,10 @@
 {
   "extends": "@react-native/typescript-config",
   "compilerOptions": {
-    "types": ["jest"]
+    "types": ["jest"],
+    "experimentalDecorators": true,
+    "useDefineForClassFields": false
   },
-  "include": ["**/*.ts", "**/*.tsx"],
+  "include": ["**/*.ts", "**/*.tsx", "src/types/shims.d.ts"],
   "exclude": ["**/node_modules", "**/Pods"]
 }
